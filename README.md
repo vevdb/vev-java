@@ -3,17 +3,16 @@
 This package is the Java 21 Foreign Function & Memory wrapper for VevDB's native
 C ABI. It is the lower JVM layer used by the Clojure package.
 
-Current local development:
+Build the Java wrapper:
 
 ```sh
-scripts/build_c_abi.sh
-scripts/stage_jvm_native.sh
-scripts/package_jvm.sh
+mvn package
 ```
 
-That builds the platform native library under `build/lib`, compiles the Java
-wrapper into `build/examples/java`, runs the Java smoke, and stages the native
-library under `build/jvm-native` using the resource layout below.
+This produces the platform-independent Java classes, source jar, and Javadoc
+jar. Runtime releases are assembled by the
+[VevDB engine repository](https://github.com/vevdb/vev), which adds each
+verified native engine library to the Java jar.
 
 The wrapper loads the native library in this order:
 
@@ -29,16 +28,15 @@ Java FFM is still a preview API, so local runs need:
 --enable-preview --enable-native-access=ALL-UNNAMED
 ```
 
-Planned Maven coordinate:
+Maven coordinate:
 
 ```text
 dev.vevdb:vev-java
 ```
 
-The Java artifact is intended to be a one-dependency entry point for Java
-applications. It depends on the matching platform native artifact, so Java
-users should not also list a separate `vev-native-*` dependency in normal
-project setup.
+The released Java artifact is the one-dependency entry point for Java
+applications. It contains the verified native engines as classpath resources,
+so Java users do not list a separate `vev-native-*` dependency.
 
 Basic usage:
 
@@ -147,12 +145,9 @@ dev/vevdb/vev/native/darwin-x86_64/libvev.dylib
 dev/vevdb/vev/native/linux-x86_64/libvev.so
 ```
 
-`scripts/stage_jvm_native.sh` creates that resource tree for one platform.
-`scripts/assemble_jvm_release.sh` verifies the platform-independent Java
-classes agree and assembles the final cross-platform jar after all platform
-builds pass.
-
-`scripts/package_jvm.sh` builds local proof jars under `build/jvm`:
+The engine repository's release workflow creates that resource tree for each
+platform, verifies that the platform-independent Java classes agree, and
+assembles the final cross-platform jar after all platform builds pass:
 
 ```text
 vev-java-0.1.0.jar
@@ -160,15 +155,20 @@ vev-native-<platform>-0.1.0.jar
 vev-clj-0.1.0.jar
 ```
 
-It also writes a local Maven-style repository under `build/m2`. These
-per-platform artifacts exercise native loading during platform builds. The
-combined release writes the publishable `vev-java` and `vev-clj` artifacts
-after merging all platform resources.
-
-`scripts/smoke_jvm_coordinates.sh` verifies a fresh Maven project with only
+The release gate verifies a fresh Maven project with only
 `dev.vevdb:vev-java` and a fresh Clojure project with only
 `dev.vevdb/vev-clj`. Neither consumer selects a platform artifact or configures
 a native-library path.
+
+For native integration work, check this repository out beside the engine:
+
+```text
+vev/
+vev-java/
+```
+
+Set `VEV_LIB` or `-Dvev.library` to a locally built engine when running the
+source-only Maven build. Normal released artifacts do not need that override.
 
 Durable stores are opened through VevDB APIs with paths such as `app.vev`. The
 release native library includes SQLite with FTS5. Java and Clojure applications

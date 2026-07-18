@@ -9,7 +9,7 @@
   <version>0.1.0</version>
   <name>VevDB for Java</name>
   <description>Java Foreign Function &amp; Memory wrapper for VevDB.</description>
-  <url>https://github.com/vevdb/vev</url>
+  <url>https://github.com/vevdb/vev-java</url>
 
   <licenses>
     <license>
@@ -17,6 +17,19 @@
       <url>https://www.eclipse.org/legal/epl-2.0/</url>
     </license>
   </licenses>
+
+  <developers>
+    <developer>
+      <name>Andreas Flakstad</name>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/vevdb/vev-java.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/vevdb/vev-java.git</developerConnection>
+    <url>https://github.com/vevdb/vev-java</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
@@ -35,6 +48,35 @@
             <arg>--enable-preview</arg>
           </compilerArgs>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.11.2</version>
+        <configuration>
+          <additionalOptions>--enable-preview</additionalOptions>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
