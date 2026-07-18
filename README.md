@@ -20,7 +20,7 @@ The wrapper loads the native library in this order:
 2. `VEV_LIB=/path/to/libvev.dylib`
 3. the platform library under `build/lib`
 4. bundled classpath resource:
-   `dev/vevdb/vev/native/<platform>/<mapped-library-name>`
+   `com/vevdb/vev/native/<platform>/<mapped-library-name>`
 
 Java FFM is still a preview API, so local runs need:
 
@@ -31,13 +31,13 @@ Java FFM is still a preview API, so local runs need:
 Maven coordinate:
 
 ```text
-dev.vevdb:vev-java
+com.vevdb:vev-java
 ```
 
-The verified `0.1.0` release-candidate jar and POM are currently available from
-the [VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.1.0-rc.3).
-Anonymous resolution by coordinate will begin when the `dev.vevdb` namespace is
-published to Maven Central.
+The next VevDB prerelease will be the first artifact under `com.vevdb`.
+Anonymous resolution by coordinate will begin when that namespace is published
+to Maven Central. The earlier `v0.1.0-rc.3` artifact used the provisional
+`dev.vevdb` coordinate and Java package.
 
 The released Java artifact is the one-dependency entry point for Java
 applications. It contains the verified native engines as classpath resources,
@@ -142,12 +142,14 @@ successful commits only.
 
 The Java package supports explicit native library paths, but normal consumers
 do not need one. The combined release merges each verified platform library
-into `dev.vevdb:vev-java` as classpath resources such as:
+into `com.vevdb:vev-java` as classpath resources such as:
 
 ```text
-dev/vevdb/vev/native/darwin-aarch64/libvev.dylib
-dev/vevdb/vev/native/darwin-x86_64/libvev.dylib
-dev/vevdb/vev/native/linux-x86_64/libvev.so
+com/vevdb/vev/native/darwin-aarch64/libvev.dylib
+com/vevdb/vev/native/darwin-x86_64/libvev.dylib
+com/vevdb/vev/native/linux-aarch64/libvev.so
+com/vevdb/vev/native/linux-x86_64/libvev.so
+com/vevdb/vev/native/windows-x86_64/vev.dll
 ```
 
 The engine repository's release workflow creates that resource tree for each
@@ -161,8 +163,8 @@ vev-clj-0.1.0.jar
 ```
 
 The release gate verifies a fresh Maven project with only
-`dev.vevdb:vev-java` and a fresh Clojure project with only
-`dev.vevdb/vev-clj`. Neither consumer selects a platform artifact or configures
+`com.vevdb:vev-java` and a fresh Clojure project with only
+`com.vevdb/vev-clj`. Neither consumer selects a platform artifact or configures
 a native-library path.
 
 For native integration work, check this repository out beside the engine:
