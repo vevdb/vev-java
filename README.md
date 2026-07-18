@@ -34,6 +34,11 @@ Maven coordinate:
 dev.vevdb:vev-java
 ```
 
+The verified `0.1.0` release-candidate jar and POM are currently available from
+the [VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.1.0-rc.3).
+Anonymous resolution by coordinate will begin when the `dev.vevdb` namespace is
+published to Maven Central.
+
 The released Java artifact is the one-dependency entry point for Java
 applications. It contains the verified native engines as classpath resources,
 so Java users do not list a separate `vev-native-*` dependency.
