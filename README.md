@@ -34,8 +34,8 @@ Maven coordinate:
 com.vevdb:vev-java
 ```
 
-The `0.2.0-rc.1` artifact is available from the
-[VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.2.0-rc.1).
+The `0.2.0-rc.2` artifact is available from the
+[VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.2.0-rc.2).
 Anonymous resolution by coordinate will begin when the `com.vevdb` namespace
 is published to Maven Central. The earlier `v0.1.0-rc.3` artifact used the
 provisional `dev.vevdb` coordinate and Java package.
@@ -158,9 +158,9 @@ platform, verifies that the platform-independent Java classes agree, and
 assembles the final cross-platform jar after all platform builds pass:
 
 ```text
-vev-java-0.2.0-rc.1.jar
-vev-native-<platform>-0.2.0-rc.1.jar
-vev-clj-0.2.0-rc.1.jar
+vev-java-0.2.0-rc.2.jar
+vev-native-<platform>-0.2.0-rc.2.jar
+vev-clj-0.2.0-rc.2.jar
 ```
 
 The release gate verifies a fresh Maven project with only
