@@ -34,11 +34,12 @@ Maven coordinate:
 com.vevdb:vev-java
 ```
 
-The `0.2.0-rc.2` artifact is available from the
+The `0.2.0-rc.2` artifact is available from
+[Maven Central](https://central.sonatype.com/artifact/com.vevdb/vev-java/0.2.0-rc.2)
+and the
 [VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.2.0-rc.2).
-Anonymous resolution by coordinate will begin when the `com.vevdb` namespace
-is published to Maven Central. The earlier `v0.1.0-rc.3` artifact used the
-provisional `dev.vevdb` coordinate and Java package.
+The earlier `v0.1.0-rc.3` artifact used the provisional `dev.vevdb` coordinate
+and Java package.
 
 The released Java artifact is the one-dependency entry point for Java
 applications. It contains the verified native engines as classpath resources,
