@@ -20,6 +20,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.lang.ref.Cleaner;
 import java.util.UUID;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 public final class Vev implements AutoCloseable {
     private static final Linker LINKER = Linker.nativeLinker();
@@ -88,6 +90,7 @@ public final class Vev implements AutoCloseable {
     private final MethodHandle connectionInfoEdn;
     private final MethodHandle connectionClose;
     private final MethodHandle connectionDb;
+    private final MethodHandle connectionLatestDb;
     private final MethodHandle connectionTransactEdnReport;
     private final MethodHandle connectionTransactEdnReportWithTxFns;
     private final MethodHandle connectionTxCommitReport;
@@ -129,10 +132,13 @@ public final class Vev implements AutoCloseable {
     private final MethodHandle dbEntity;
     private final MethodHandle dbEntityLookupRefString;
     private final MethodHandle dbEntityIdent;
+    private final MethodHandle dbDatomsValue;
+    private final MethodHandle dbIndexRangeValue;
     private final MethodHandle entityFree;
     private final MethodHandle entityFound;
     private final MethodHandle entityId;
     private final MethodHandle entityContains;
+    private final MethodHandle entityAttrFlags;
     private final MethodHandle entityGet;
     private final MethodHandle entityValues;
     private final MethodHandle entityRef;
@@ -446,6 +452,7 @@ public final class Vev implements AutoCloseable {
         this.connectionInfoEdn = downcall("vev_connection_info_edn", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.connectionClose = downcall("vev_connection_close", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         this.connectionDb = downcall("vev_connection_db", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        this.connectionLatestDb = downcall("vev_connection_latest_db", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.connectionTransactEdnReport = downcall("vev_connection_transact_edn_report", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.connectionTransactEdnReportWithTxFns = downcall("vev_connection_transact_edn_report_with_tx_fns", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.connectionTxCommitReport = downcall("vev_connection_tx_commit_report", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
@@ -487,10 +494,13 @@ public final class Vev implements AutoCloseable {
         this.dbEntity = downcall("vev_db_entity", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
         this.dbEntityLookupRefString = downcall("vev_db_entity_lookup_ref_string", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.dbEntityIdent = downcall("vev_db_entity_ident", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        this.dbDatomsValue = downcall("vev_db_datoms_value", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        this.dbIndexRangeValue = downcall("vev_db_index_range_value", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.entityFree = downcall("vev_entity_free", FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         this.entityFound = downcall("vev_entity_found", FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS));
         this.entityId = downcall("vev_entity_id", FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
         this.entityContains = downcall("vev_entity_contains", FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        this.entityAttrFlags = downcall("vev_entity_attr_flags", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.entityGet = downcall("vev_entity_get", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.entityValues = downcall("vev_entity_values", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         this.entityRef = downcall("vev_entity_ref", FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
@@ -1146,6 +1156,12 @@ public final class Vev implements AutoCloseable {
         return out.toString();
     }
 
+    private static String valueEdn(Object value) {
+        StringBuilder out = new StringBuilder();
+        appendEdn(out, value);
+        return out.toString();
+    }
+
     private static void appendEdn(StringBuilder out, Object value) {
         if (value == null) {
             out.append("nil");
@@ -1172,6 +1188,17 @@ public final class Vev implements AutoCloseable {
             for (Object item : items) {
                 if (index > 0) out.append(" ");
                 appendEdn(out, item);
+                index++;
+            }
+            out.append("}");
+        } else if (value instanceof Map<?, ?> items) {
+            out.append("{");
+            int index = 0;
+            for (Map.Entry<?, ?> item : items.entrySet()) {
+                if (index > 0) out.append(" ");
+                appendEdn(out, item.getKey());
+                out.append(" ");
+                appendEdn(out, item.getValue());
                 index++;
             }
             out.append("}");
@@ -1250,6 +1277,34 @@ public final class Vev implements AutoCloseable {
         return out;
     }
 
+    @FunctionalInterface
+    private interface DBSupplier {
+        DB get() throws Throwable;
+    }
+
+    private CompletableFuture<DB> syncFuture(DB current, long t, DBSupplier supplier) throws Throwable {
+        if (t < 0) throw new IllegalArgumentException("sync t must be non-negative");
+        if (current.basisT() >= t) return CompletableFuture.completedFuture(current);
+        current.close();
+        CompletableFuture<DB> result = new CompletableFuture<>();
+        Thread.startVirtualThread(() -> {
+            try {
+                while (!result.isDone()) {
+                    DB snapshot = supplier.get();
+                    if (snapshot.basisT() >= t) {
+                        result.complete(snapshot);
+                        return;
+                    }
+                    snapshot.close();
+                    Thread.sleep(10);
+                }
+            } catch (Throwable error) {
+                result.completeExceptionally(error);
+            }
+        });
+        return result;
+    }
+
     private static final class NativeHandle implements Runnable {
         private final MethodHandle closeHandle;
         private MemorySegment raw;
@@ -1277,6 +1332,7 @@ public final class Vev implements AutoCloseable {
     public record Keyword(String text) {}
     public record Symbol(String text) {}
     public record Entry(Object key, Object value) {}
+    public record Datom(long e, Keyword a, Object v, long tx, boolean added) {}
     public record ReturnKeys(String marker, List<Object> keys) {}
 
     public record ColumnResult(int rowCount, int[] kinds, Object[] columns) {
@@ -1717,6 +1773,14 @@ public final class Vev implements AutoCloseable {
             return new DB(db);
         }
 
+        public CompletableFuture<DB> sync() throws Throwable {
+            return CompletableFuture.completedFuture(db());
+        }
+
+        public CompletableFuture<DB> sync(long t) throws Throwable {
+            return syncFuture(db(), t, this::db);
+        }
+
         public Log log() throws Throwable {
             return new Log(db());
         }
@@ -1887,6 +1951,21 @@ public final class Vev implements AutoCloseable {
             MemorySegment db = (MemorySegment) connectionDb.invoke(raw);
             if (isNull(db)) throw new IllegalStateException("failed to retain DB snapshot");
             return new DB(db);
+        }
+
+        private DB latestDb() throws Throwable {
+            requireOpen();
+            MemorySegment db = (MemorySegment) connectionLatestDb.invoke(raw);
+            if (isNull(db)) throw new IllegalStateException("failed to acquire latest DB snapshot");
+            return new DB(db);
+        }
+
+        public CompletableFuture<DB> sync() throws Throwable {
+            return CompletableFuture.completedFuture(latestDb());
+        }
+
+        public CompletableFuture<DB> sync(long t) throws Throwable {
+            return syncFuture(latestDb(), t, this::latestDb);
         }
 
         public Log log() throws Throwable {
@@ -2180,6 +2259,78 @@ public final class Vev implements AutoCloseable {
                 if (isNull(raw)) throw new IllegalStateException("failed to create ident entity view");
                 return new EntityView(raw);
             }
+        }
+
+        public Iterable<Datom> datoms(Object index, Object... components) throws Throwable {
+            return indexDatoms(0, index, components);
+        }
+
+        public Iterable<Datom> seekDatoms(Object index, Object... components) throws Throwable {
+            return indexDatoms(1, index, components);
+        }
+
+        public Iterable<Datom> rseekDatoms(Object index, Object... components) throws Throwable {
+            return indexDatoms(2, index, components);
+        }
+
+        private Iterable<Datom> indexDatoms(int mode, Object index, Object[] components) throws Throwable {
+            requireOpen();
+            String indexText = index instanceof Keyword keyword ? keyword.text() : String.valueOf(index);
+            try (Arena local = Arena.ofConfined();
+                 ValueHandle value = new ValueHandle((MemorySegment) dbDatomsValue.invoke(
+                     handle.raw,
+                     mode,
+                     local.allocateFrom(indexText),
+                     local.allocateFrom(inputsEdn(Arrays.asList(components)))))) {
+                Object result = value.value();
+                if (!(result instanceof Iterable<?> iterable)) {
+                    throw new IllegalStateException("native datoms result was not iterable");
+                }
+                return datomList(iterable);
+            }
+        }
+
+        public Iterable<Datom> indexRange(Object attr, Object start, Object end) throws Throwable {
+            requireOpen();
+            String attrText = attr instanceof Keyword keyword ? keyword.text() : String.valueOf(attr);
+            try (Arena local = Arena.ofConfined();
+                 ValueHandle value = new ValueHandle((MemorySegment) dbIndexRangeValue.invoke(
+                     handle.raw,
+                     local.allocateFrom(attrText),
+                     local.allocateFrom(valueEdn(start)),
+                     local.allocateFrom(valueEdn(end))))) {
+                Object result = value.value();
+                if (!(result instanceof Iterable<?> iterable)) {
+                    throw new IllegalStateException("native index-range result was not iterable");
+                }
+                return datomList(iterable);
+            }
+        }
+
+        private List<Datom> datomList(Iterable<?> values) {
+            List<Datom> out = new ArrayList<>();
+            for (Object value : values) {
+                if (!(value instanceof MapValue map)) {
+                    throw new IllegalStateException("native datom was not a map value");
+                }
+                long e = 0;
+                Keyword a = null;
+                Object v = null;
+                long tx = 0;
+                boolean added = false;
+                for (Entry entry : map.entries()) {
+                    if (!(entry.key() instanceof Keyword key)) continue;
+                    switch (key.text()) {
+                        case ":e" -> e = ((Entity) entry.value()).id();
+                        case ":a" -> a = (Keyword) entry.value();
+                        case ":v" -> v = entry.value();
+                        case ":tx" -> tx = ((Entity) entry.value()).id();
+                        case ":added" -> added = (boolean) entry.value();
+                    }
+                }
+                out.add(new Datom(e, a, v, tx, added));
+            }
+            return out;
         }
 
         public ResultSet query(PreparedQuery query, String inputs) throws Throwable {
@@ -2941,6 +3092,13 @@ public final class Vev implements AutoCloseable {
             requireOpen();
             try (Arena local = Arena.ofConfined()) {
                 return (boolean) entityContains.invoke(handle.raw, local.allocateFrom(attr));
+            }
+        }
+
+        public int attrFlags(String attr) throws Throwable {
+            requireOpen();
+            try (Arena local = Arena.ofConfined()) {
+                return (int) entityAttrFlags.invoke(handle.raw, local.allocateFrom(attr));
             }
         }
 
