@@ -109,6 +109,31 @@ try (Vev.DB db = conn.db();
 `java.time.Instant`, or `null`. It returns ordinary Java lists and maps with
 the Datomic-shaped `{:t ..., :data ...}` structure.
 
+Raw index access uses Datomic's index names and component ordering:
+
+```java
+for (Vev.Datom datom : db.datoms(":eavt", 1, ":user/name")) {
+    System.out.println(datom.v());
+}
+
+db.seekDatoms(":avet", ":user/email", "m");
+db.rseekDatoms(":avet", ":user/email", "m");
+db.indexRange(":user/email", "a", "n");
+```
+
+Each `Vev.Datom` contains `e`, `a`, `v`, `tx`, and `added`.
+
+Connections also expose Datomic-shaped synchronization futures:
+
+```java
+try (Vev.DB coordinated = conn.sync(knownBasisT).get()) {
+    System.out.println(coordinated.basisT());
+}
+```
+
+Prefer `db()` for ordinary reads. `sync()` and `sync(long)` are for
+coordination with other connections or processes.
+
 Transaction functions use a host registry plus a Datomic-style installed ident
 in the DB:
 
@@ -124,9 +149,10 @@ try (Vev.TxFunctionRegistry fns = vev.txFunctionRegistry()) {
 }
 ```
 
-The Java callback returns EDN tx-data text. Higher-level clients such as
-Clojure can wrap this and let callbacks return ordinary host data. The same
-registry shape works for durable `vev.connect("app.vev")` handles.
+The Java callback returns EDN tx-data text. This is a low-level embedding
+extension, not Datomic stored-function compatibility. It is intentionally not
+wrapped by the Datomic-shaped Clojure API. The same registry shape works for
+durable `vev.connect("app.vev")` handles.
 
 Typed transaction builders are also accepted by durable connections, so bulk
 host writes do not have to round-trip through EDN text:
