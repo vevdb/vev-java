@@ -38,6 +38,8 @@ The `0.2.0-rc.2` artifact is available from
 [Maven Central](https://central.sonatype.com/artifact/com.vevdb/vev-java/0.2.0-rc.2)
 and the
 [VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.2.0-rc.2).
+The source on `main` targets the next VevDB release and its Datomic-shaped
+query-value ABI; it is not compatible with the `0.2.0-rc.2` native engine.
 The earlier `v0.1.0-rc.3` artifact used the provisional `dev.vevdb` coordinate
 and Java package.
 
@@ -52,13 +54,18 @@ try (Vev vev = Vev.load();
      Vev.Connection conn = vev.createConn()) {
     conn.transact("[{:db/id 1 :user/name \"Ada\"}]");
     try (Vev.DB db = conn.db()) {
-        System.out.println(vev.queryRows(Map.of(
+        System.out.println(vev.query(Map.of(
             "query", "[:find ?name :where [?e :user/name ?name]]",
             "args", List.of(db))));
         System.out.println(db.pull("[:user/name]", 1));
     }
 }
 ```
+
+`Vev.query` follows the Datomic request-map and `:find` result shape. Relation
+queries return a `Set` of tuple `List` values, collections and tuples return
+`List` values, and scalar finds return the scalar or `null`. Reusable prepared
+queries remain available through `queryResult`, `DB.query`, and `ResultSet`.
 
 DB snapshots can also produce entity views. The view is tied to the immutable
 DB value, not the live connection:

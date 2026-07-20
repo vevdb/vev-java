@@ -22,3 +22,11 @@ jobs:
           cache: maven
       - name: Build Java API, sources, and Javadocs
         run: mvn --batch-mode --no-transfer-progress verify
+      - name: Verify source matches VevDB main
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors \
+            --silent --show-error \
+            --output Vev-main.java \
+            https://raw.githubusercontent.com/vevdb/vev/main/clients/java/src/main/java/com/vevdb/Vev.java
+          git diff --no-index --ignore-space-at-eol --exit-code \
+            src/main/java/com/vevdb/Vev.java Vev-main.java
