@@ -34,12 +34,12 @@ Maven coordinate:
 com.vevdb:vev-java
 ```
 
-The `0.2.0-rc.2` artifact is available from
+The current public `0.2.0-rc.2` artifact is available from
 [Maven Central](https://central.sonatype.com/artifact/com.vevdb/vev-java/0.2.0-rc.2)
 and the
 [VevDB prerelease](https://github.com/vevdb/vev/releases/tag/v0.2.0-rc.2).
-The source on `main` targets the next VevDB release and its Datomic-shaped
-query-value ABI; it is not compatible with the `0.2.0-rc.2` native engine.
+The source on `main` is prepared for `0.2.0-rc.3` and is not compatible with
+the `0.2.0-rc.2` native engine.
 The earlier `v0.1.0-rc.3` artifact used the provisional `dev.vevdb` coordinate
 and Java package.
 
@@ -217,9 +217,9 @@ platform, verifies that the platform-independent Java classes agree, and
 assembles the final cross-platform jar after all platform builds pass:
 
 ```text
-vev-java-0.2.0-rc.2.jar
-vev-native-<platform>-0.2.0-rc.2.jar
-vev-clj-0.2.0-rc.2.jar
+vev-java-0.2.0-rc.3.jar
+vev-native-<platform>-0.2.0-rc.3.jar
+vev-clj-0.2.0-rc.3.jar
 ```
 
 The release gate verifies a fresh Maven project with only
