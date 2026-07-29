@@ -34,9 +34,9 @@ Maven coordinate:
 com.vevdb:vev-java
 ```
 
-The current public `0.2.2` artifact is available from
-[Maven Central](https://central.sonatype.com/artifact/com.vevdb/vev-java/0.2.2)
-and the [VevDB release](https://github.com/vevdb/vev/releases/tag/v0.2.2).
+The current public `0.2.3` artifact is available from
+[Maven Central](https://central.sonatype.com/artifact/com.vevdb/vev-java/0.2.3)
+and the [VevDB release](https://github.com/vevdb/vev/releases/tag/v0.2.3).
 The earlier `v0.1.0-rc.3` artifact used the provisional `dev.vevdb` coordinate
 and Java package.
 
@@ -214,9 +214,9 @@ platform, verifies that the platform-independent Java classes agree, and
 assembles the final cross-platform jar after all platform builds pass:
 
 ```text
-vev-java-0.2.2.jar
-vev-native-<platform>-0.2.2.jar
-vev-clj-0.2.2.jar
+vev-java-0.2.3.jar
+vev-native-<platform>-0.2.3.jar
+vev-clj-0.2.3.jar
 ```
 
 The release gate verifies a fresh Maven project with only
