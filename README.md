@@ -59,6 +59,22 @@ try (Vev vev = Vev.load();
 }
 ```
 
+## Direct SQLite
+
+`VevSQLite` exposes the bundled SQLite implementation for separate application
+database files. It provides connections and prepared statements over VevDB's
+native `vev_sqlite_*` API.
+
+```java
+try (VevSQLite sqlite = VevSQLite.load();
+     VevSQLite.Connection db = sqlite.open("application.sqlite")) {
+    db.exec("create table item(key text primary key, value blob)");
+}
+```
+
+See the
+[Direct SQLite guide](https://github.com/vevdb/vev/blob/main/docs/sqlite.md).
+
 `Vev.query` follows the Datomic request-map and `:find` result shape. Relation
 queries return a `Set` of tuple `List` values, collections and tuples return
 `List` values, and scalar finds return the scalar or `null`. Reusable prepared
